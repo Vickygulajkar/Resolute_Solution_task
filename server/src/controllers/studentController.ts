@@ -18,6 +18,17 @@ export const createStudent = async (
             return;
         }
 
+        // Check for duplicate email
+        const students = await Student.find();
+        const existingStudent = students.find(s => decryptData(s.email || "") === email);
+        if (existingStudent) {
+            res.status(400).json({
+                success: false,
+                message: "Email already exists"
+            });
+            return;
+        }
+
         const student = await Student.create({
             fullName: encryptData(fullName),
             email: encryptData(email),
@@ -29,10 +40,22 @@ export const createStudent = async (
             password: encryptData(password),
         });
 
+        const decryptedStudent = {
+            ...student.toObject(),
+            fullName: decryptData(student.fullName || ""),
+            email: decryptData(student.email || ""),
+            phone: decryptData(student.phone || ""),
+            dob: decryptData(student.dob || ""),
+            gender: decryptData(student.gender || ""),
+            address: decryptData(student.address || ""),
+            course: decryptData(student.course || ""),
+            password: decryptData(student.password || ""),
+        };
+
         res.status(201).json({
             success: true,
             message: "Student registered successfully",
-            student
+            student: decryptedStudent
         });
 
     } catch (error) {
@@ -101,6 +124,20 @@ export const updateStudent = async (
             password
         } = req.body;
 
+        // Check for duplicate email (excluding the current student)
+        const students = await Student.find();
+        const existingStudent = students.find(s => 
+            decryptData(s.email || "") === email && s._id.toString() !== id
+        );
+        
+        if (existingStudent) {
+            res.status(400).json({
+                success: false,
+                message: "Email already exists"
+            });
+            return;
+        }
+
         const updatedStudent = await Student.findByIdAndUpdate(
             id,
             {
@@ -116,10 +153,30 @@ export const updateStudent = async (
             { new: true }
         );
 
+        if (!updatedStudent) {
+            res.status(404).json({
+                success: false,
+                message: "Student not found"
+            });
+            return;
+        }
+
+        const decryptedStudent = {
+            ...updatedStudent.toObject(),
+            fullName: decryptData(updatedStudent.fullName || ""),
+            email: decryptData(updatedStudent.email || ""),
+            phone: decryptData(updatedStudent.phone || ""),
+            dob: decryptData(updatedStudent.dob || ""),
+            gender: decryptData(updatedStudent.gender || ""),
+            address: decryptData(updatedStudent.address || ""),
+            course: decryptData(updatedStudent.course || ""),
+            password: decryptData(updatedStudent.password || ""),
+        };
+
         res.status(200).json({
             success: true,
             message: "Student updated successfully",
-            updatedStudent
+            updatedStudent: decryptedStudent
         });
 
     } catch (error) {
@@ -171,20 +228,21 @@ export const loginStudent = async (
         const students = await Student.find();
 
         const student = students.find((item: any) => {
-
-            return (
-                decryptData(item.email || "") === email &&
-                decryptData(item.password || "") === password
-            );
+            try {
+                const decryptedEmail = decryptData(item.email || "");
+                const decryptedPassword = decryptData(item.password || "");
+                return decryptedEmail === email && decryptedPassword === password;
+            } catch (err) {
+                console.error("Decryption error for student:", item._id);
+                return false;
+            }
         });
 
         if (!student) {
-
-            res.status(400).json({
+            res.status(401).json({
                 success: false,
-                message: "Invalid credentials"
+                message: "Invalid email or password"
             });
-
             return;
         }
 

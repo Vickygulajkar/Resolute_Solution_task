@@ -7,7 +7,12 @@ export const encryptData = (data: string) => {
 };
 
 export const decryptData = (cipherText: string) => {
-    const bytes = CryptoJS.AES.decrypt(cipherText, SECRET_KEY);
-
-    return bytes.toString(CryptoJS.enc.Utf8);
+    try {
+        if (!cipherText) return "";
+        const bytes = CryptoJS.AES.decrypt(cipherText, SECRET_KEY);
+        return bytes.toString(CryptoJS.enc.Utf8);
+    } catch (error) {
+        console.error("Decryption error:", error);
+        return "";
+    }
 };
