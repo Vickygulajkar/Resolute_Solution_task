@@ -35,6 +35,15 @@ const StudentList: React.FC = () => {
         if (response.success) {
           setStudents(students.filter(s => s._id !== id));
           alert('Student deleted successfully');
+
+          // Check if the deleted student is the current logged-in user
+          const currentUserStr = localStorage.getItem('user');
+          if (currentUserStr) {
+            const currentUser = JSON.parse(currentUserStr);
+            if (currentUser._id === id) {
+              handleLogout();
+            }
+          }
         }
       } catch (err) {
         alert('Failed to delete student');
